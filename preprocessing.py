@@ -8,7 +8,6 @@ Created on Apr 25, 2018
 import argparse
 import zipfile
 import pandas as pd
-from collections import defaultdict
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
@@ -25,24 +24,40 @@ def other_info_about_reviews(review_frame, business_frame):
     user_list = list(review_frame["user_id"].unique())
     data_list = []
     for user in user_list:
-        user_dict = {"num_states":0,"variance":0}
+        user_dict = {"num_states":0,"variance":0, "1_day_reviews":0, "star_variance":0}
         user_frame = review_frame.loc[review_frame["user_id"] == user].copy(deep = True)
+
+        #get the state from the business dataframe and add it to the review frame
         user_frame["state"] = user_frame["business_id"].apply(lambda x: business_frame.loc[business_frame["business_id"] == x]["state"].tolist()[0])
+
+        #get the total number of states they have reviewed in
         user_dict["num_states"] = len(user_frame["state"].unique())
+
+        #get the binary columns for the states
         dummies = pd.get_dummies(user_frame["state"])
-        variance_list = []
 
         #takes the average of the variances of the different binary  columns
+        variance_list = []
         for col in dummies:
             variance_list.append(np.var(dummies[col].tolist()))
         user_dict["variance"] = np.average(variance_list)
         data_list.append(user_dict)
 
+        #get the max number of reviews left in the same day
+        day_counts = np.max(user_frame["date"].value_counts())
+        user_dict["1_day_reviews"] = day_counts
+
+        #get the variance for the number of stars they give a business
+        user_dict["star_variance"] = np.var(user_frame["stars"].tolist())
+
     data_frame = pd.DataFrame(data_list)
     normalizer = MinMaxScaler()
+    #normalize everything between 0 and 1
     output_frame = pd.DataFrame(normalizer.fit_transform(data_frame))
+
+    #label the rows and columns with usernames and the columns we just made
     output_frame.index = user_list
-    output_frame.columns = ["num_states","variance"]
+    output_frame.columns = ["num_states","state_variance", "1_day_max_reviews", "star_variance"]
     return output_frame
 
 def bag_of_words(review_frame, pca_count = 50):
