@@ -3,13 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 
-def generateHist(data, bins):
+def generateHist(data, bins,title):
 
     plt.hist(data, bins, histtype='bar', rwidth=0.7)
 
     plt.xlabel("data")
     plt.ylabel("bins")
-    plt.title("Data visiualization")
+    plt.title(title)
     plt.legend()
     plt.show()
 
@@ -31,11 +31,11 @@ def getClusterStatistics(x_input):
     return mean, variance
 
 
-def main():
+def getStats(filename, data_file, title = "data"):
     columns = ['num_states','state_variance','1_day_max_reviews','star_variance']
 
-
-    data_file = pd.read_csv("cleaned_data_1000.csv")
+    if len(filename) > 0:
+        data_file = pd.read_csv(filename)
 
     results  = {}
 
@@ -43,7 +43,7 @@ def main():
         results[named_col] = getClusterStatistics(data_file[named_col])
 
         bins = np.sort(list(data_file[named_col].unique()))
-        generateHist(data_file[named_col],bins)
+        generateHist(data_file[named_col],bins, title+":"+named_col)
 
     print(results)
 
@@ -51,6 +51,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    getStats("cleaned_data_1000.csv",[])
 
 

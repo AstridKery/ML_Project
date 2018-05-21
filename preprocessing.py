@@ -12,6 +12,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+import random
 
 def other_info_about_reviews(review_frame, business_frame):
     '''
@@ -104,30 +105,53 @@ def parse_args():
                         help='Path to data file')
     return parser.parse_known_args()
 
-
-if __name__ == "__main__":
+def preprocess(num_groups = "all"):
     ARGS, unparsed = parse_args()
 
     with zipfile.ZipFile(ARGS.dataset, "r") as files:
-        user = pd.read_csv(files.open('yelp_user.csv'), nrows = 1000)
-        #print(user.head(n=15))
-        #print("######################")
-        reviews = pd.read_csv(files.open('yelp_review.csv'), nrows = 10000)
-        #print(reviews.head(n=15))
-        #print("#####################")
+        user = pd.read_csv(files.open('yelp_user.csv'))  # , nrows = 1000)
+        # print(user.head(n=15))
+        # print("######################")
+        reviews = pd.read_csv(files.open('yelp_review.csv'))
         business = pd.read_csv(files.open('yelp_business.csv'))
-        #print(business.head(n=50))
 
-        the_bag = bag_of_words(review_frame=reviews)
-        state_info = other_info_about_reviews(review_frame=reviews,business_frame=business)
+        users = reviews["user_id"].unique().tolist()
+        random.shuffle(users)
+        print("read in this many reviews: ", len(reviews))
+        print("have this many users", len(users))
+        total_frame = []
 
-        total_prep_so_far = pd.concat([the_bag,state_info], axis=1)
-        print(total_prep_so_far)
+        if num_groups == "all":
+            end = len(users)-10000
+        else:
+            end = 10000*num_groups
 
-        # business_attributes = pd.read_csv(files.open('yelp_business_attributes.csv'))
-        # maybe we want business hours if we can somehow see if reviews were left
-        # during business hours?
-        # business_hours = pd.read_csv(files.open('yelp_business_hours.csv'))
-        # check_in = pd.read_csv(files.open('yelp_checkin.csv'))
+        for i in range(0, end, 10000):
 
-        # tip = pd.read_csv(files.open('yelp_tip.csv'))
+            print("[", i, ",", i + 10000, "] out of", len(users))
+            mini_users = users[i:i + 10000]
+            review_users = reviews.loc[reviews["user_id"].isin(mini_users)]
+            print("this many reviews in total:", len(review_users))
+            try:
+                the_bag = bag_of_words(review_frame=review_users)
+                print("bagged stuff")
+                state_info = other_info_about_reviews(review_frame=review_users, business_frame=business)
+
+                total_prep_so_far = pd.concat([the_bag, state_info], axis=1)
+                if (len(total_frame) == 0):
+                    total_frame = total_prep_so_far.copy(deep=True)
+                else:
+                    total_frame = pd.concat([total_frame, total_prep_so_far], axis=0)
+            except Exception as e:
+                print(review_users)
+                print("The exception:", e)
+                print("threw an error")
+                total_frame.to_csv("cleaned_data_upto_" + str(i) + ".csv")
+
+                # print(total_prep_so_far)
+        total_frame.to_csv("cleaned_data_"+str(num_groups)+".csv")
+
+
+
+if __name__ == "__main__":
+    preprocess()
