@@ -10,9 +10,11 @@ import zipfile
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import PCA
+from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import random
+import sys
 
 def other_info_about_reviews(review_frame, business_frame):
     '''
@@ -67,7 +69,7 @@ def bag_of_words(review_frame, pca_count = 50):
     :param review_frame: the dataframe with the reviews
     :return:
     '''
-    vectorizer = CountVectorizer(stop_words='english')
+    vectorizer = CountVectorizer(stop_words='english', max_features=10000)
 
     user_list = list(review_frame["user_id"].unique())
     all_text_list = []
@@ -89,10 +91,14 @@ def bag_of_words(review_frame, pca_count = 50):
         all_text = all_text.replace("  ", " ")
         all_text = all_text.lower()
         all_text_list.append(all_text)
+    print("Got the text from all the users")
     output = vectorizer.fit_transform(all_text_list)
-    pca = PCA(n_components=pca_count)
+    #print("got the bag vectors, about to do PCA")
+    #print(output.toarray())
+    pca = TruncatedSVD(n_components=pca_count)
     lower_dim_stuff = pca.fit_transform(output.toarray())
     output_frame = pd.DataFrame(lower_dim_stuff)
+    #print("Got the PCA, about to scale")
     normalizer = MinMaxScaler()
     output_frame = pd.DataFrame(normalizer.fit_transform(output_frame))
 
@@ -109,7 +115,7 @@ def preprocess(num_groups = "all"):
     ARGS, unparsed = parse_args()
 
     with zipfile.ZipFile(ARGS.dataset, "r") as files:
-        user = pd.read_csv(files.open('yelp_user.csv'))  # , nrows = 1000)
+        #user = pd.read_csv(files.open('yelp_user.csv'))  # , nrows = 1000)
         # print(user.head(n=15))
         # print("######################")
         reviews = pd.read_csv(files.open('yelp_review.csv'))
@@ -121,15 +127,17 @@ def preprocess(num_groups = "all"):
         print("have this many users", len(users))
         total_frame = []
 
+        group_size = 100000
+
         if num_groups == "all":
-            end = len(users)-10000
+            end = len(users)-group_size
         else:
-            end = 10000*num_groups
+            end = group_size*num_groups
 
-        for i in range(0, end, 10000):
+        for i in range(0, end, group_size):
 
-            print("[", i, ",", i + 10000, "] out of", len(users))
-            mini_users = users[i:i + 10000]
+            print("[", i, ",", i + group_size, "] out of", len(users))
+            mini_users = users[i:i + group_size]
             review_users = reviews.loc[reviews["user_id"].isin(mini_users)]
             print("this many reviews in total:", len(review_users))
             try:
@@ -138,18 +146,20 @@ def preprocess(num_groups = "all"):
                 state_info = other_info_about_reviews(review_frame=review_users, business_frame=business)
 
                 total_prep_so_far = pd.concat([the_bag, state_info], axis=1)
-                if (len(total_frame) == 0):
+                total_prep_so_far.to_csv("cleaned_data_"+str(i)+"_"+str(i+group_size)+".csv")
+                '''if (len(total_frame) == 0):
                     total_frame = total_prep_so_far.copy(deep=True)
                 else:
-                    total_frame = pd.concat([total_frame, total_prep_so_far], axis=0)
-            except Exception as e:
-                print(review_users)
-                print("The exception:", e)
+                    total_frame = pd.concat([total_frame, total_prep_so_far], axis=0)'''
+            except:
                 print("threw an error")
-                total_frame.to_csv("cleaned_data_upto_" + str(i) + ".csv")
+                e = sys.exc_info()
+                print(e)
+                print(review_users)
+                #total_frame.to_csv("cleaned_data_upto_" + str(i) + ".csv")
 
                 # print(total_prep_so_far)
-        total_frame.to_csv("cleaned_data_"+str(num_groups)+".csv")
+        #total_frame.to_csv("cleaned_data_"+str(num_groups)+".csv")
 
 
 

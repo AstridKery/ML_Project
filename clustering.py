@@ -124,36 +124,65 @@ def get_best_paramters_DBSCAN(dataframe):
     '''
 
 
-def get_stability_DBSCAN(dataframe,eps,min_samples):
+def get_adjacency_matrix(assignment_dict, users = []):
     '''
-    This function gets the stability metric for a DBSCAN configuration
-    :param dataframe:
-    :param eps:
-    :param min_samples:
+    This function gets an adjacency matrix for the assignments
+    :param assignment_dict: a dictionary of user->cluster
     :return:
     '''
     # for groups of 100000 users
-        #run DBSCAN twice and get hammming distance
+    new_matrix = []
+    if len(users) == 0:
+        users = list(assignment_dict.keys())
+    for user in users:
+        new_list = [1 if assignment_dict[user] == assignment_dict[user2] else 0 for user2 in users]
+        new_matrix.append(new_list)
 
-    #return average of the distances
+    adj_frame = pd.DataFrame(new_matrix)
+    adj_frame.index = users
+    adj_frame.columns = users
+    #print(adj_frame)
+    return adj_frame
 
-def get_stability_K_Means(dataframe, K):
+def get_stability(dataframe, K, eps, min_samples):
     '''
-    This function gets the stability metric for a K-means configuration
+    This function gets the stability metric for both configurations
     :param dataframe:
     :param K:
     :return:
     '''
-    # for groups of 100000 users
-    # run K-means twice and get hammming distance
+    old_matrix = []
+    user_list = []
+    diff_list = []
+    for i in range(5):
+        if i == 0:
+            old_assignments, centroids = run_Kmeans_clustering(dataframe, K)
+            old_matrix = get_adjacency_matrix(old_assignments)
+            user_list = old_matrix.index.values.tolist()
+        else:
+            new_assignments, centroids = run_Kmeans_clustering(dataframe, K)
+            new_matrix = get_adjacency_matrix(new_assignments,user_list)
 
-    # return average of the distances
+            diff = np.subtract(new_matrix,old_matrix)
+            diff_frame = pd.DataFrame(diff)
+            #print("the diff frame")
+            #print(diff_frame)
+            diff_frame.replace(-1,0,True)
+            total_diff = np.sum(np.sum(diff_frame))
+            print("Got the total diff of",total_diff)
+            diff_list.append(total_diff)
+            old_matrix = new_matrix.copy(deep = True)
+    print("The average percent difference for K-means with K=",K,"is",np.mean(diff_list))
 
 
 if __name__ == "__main__":
     cleaned_data = pd.read_csv("cleaned_data_10000.csv")
     cleaned_data.set_index("Unnamed: 0",inplace=True)
     #print(cleaned_data)
+
+    ##TEMP
+    get_stability(cleaned_data,4,0,0)
+    ##TEMP
 
     #find the best k value for k-means
     best_K = find_best_K(cleaned_data)
