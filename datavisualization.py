@@ -7,8 +7,8 @@ def generateHist(data, bins,title):
 
     plt.hist(data, bins, histtype='bar', rwidth=0.7)
 
-    plt.xlabel("data")
-    plt.ylabel("bins")
+    plt.xlabel("normalized scale")
+    plt.ylabel("num users")
     plt.title(title)
     plt.legend()
     plt.show()
