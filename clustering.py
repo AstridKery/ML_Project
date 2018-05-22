@@ -22,6 +22,7 @@ def find_best_K(dataframe):
     errors = []
 
     for K in range(3,20):
+        print(K)
         #cluster the elements on K clusters
         assignments, centroids = run_Kmeans_clustering(dataframe2,K)
         assignment_frame = pd.DataFrame.from_dict(assignments,orient="index")
@@ -136,128 +137,38 @@ def run_DBScan_clustering(dataframe, eps=0.03, min_samples=3):
         end_dict[user_list[i]] = labels[i]
     return end_dict
 
-
-def get_best_paramters_DBSCAN(dataframe):
-    '''
-    This function finds the best parameters for DBSCAN through stability
-    :param dataframe:
-    :return:
-    '''
-
-
-
-def get_adjacency_matrix(assignment_dict, users = []):
-    '''
-    This function gets an adjacency matrix for the assignments
-    :param assignment_dict: a dictionary of user->cluster
-    :return:
-    '''
-    # for groups of 100000 users
-    new_matrix = []
-    if len(users) == 0:
-        users = list(assignment_dict.keys())
-    for user in users:
-        new_list = [1 if assignment_dict[user] == assignment_dict[user2] else 0 for user2 in users]
-        new_matrix.append(new_list)
-
-    adj_frame = pd.DataFrame(new_matrix)
-    adj_frame.index = users
-    adj_frame.columns = users
-    #print(adj_frame)
-    return adj_frame
-
-def get_stability(dataframe, K, eps, min_samples):
-    '''
-    This function gets the stability metric for both configurations
-    :param dataframe:
-    :param K:
-    :return:
-    '''
-    old_matrix = []
-    user_list = []
-    diff_list = []
-    for i in range(5):
-        if i == 0:
-            old_assignments, centroids = run_Kmeans_clustering(dataframe, K)
-            old_matrix = get_adjacency_matrix(old_assignments)
-            user_list = old_matrix.index.values.tolist()
-        else:
-            new_assignments, centroids = run_Kmeans_clustering(dataframe, K)
-            new_matrix = get_adjacency_matrix(new_assignments,user_list)
-
-            diff = np.subtract(new_matrix,old_matrix)
-            diff_frame = pd.DataFrame(diff)
-            #print("the diff frame")
-            #print(diff_frame)
-            diff_frame.replace(-1,0,True)
-            total_diff = np.sum(np.sum(diff_frame))
-            print("Got the total diff of",total_diff)
-            diff_list.append(total_diff)
-            old_matrix = new_matrix.copy(deep = True)
-    print("The average percent difference for K-means with K=",K,"is",np.mean(diff_list))
-
-    diff_list = []
-    for i in range(5):
-        if i == 0:
-            old_assignments= run_DBScan_clustering(dataframe, eps=eps,min_samples=min_samples)
-            old_matrix = get_adjacency_matrix(old_assignments)
-            user_list = old_matrix.index.values.tolist()
-        else:
-            new_assignments, centroids = run_DBScan_clustering(dataframe, eps=eps,min_samples=min_samples)
-            new_matrix = get_adjacency_matrix(new_assignments,user_list)
-
-            diff = np.subtract(new_matrix,old_matrix)
-            diff_frame = pd.DataFrame(diff)
-            #print("the diff frame")
-            #print(diff_frame)
-            diff_frame.replace(-1,0,True)
-            total_diff = np.sum(np.sum(diff_frame))
-            print("Got the total diff of",total_diff)
-            diff_list.append(total_diff)
-            old_matrix = new_matrix.copy(deep = True)
-    print("The average percent difference for DBSCAN with epsilon=",eps,"and min_samples",min_samples,"is ",np.mean(diff_list))
-
 if __name__ == "__main__":
+    for file in ["cleaned_data_0_100000.csv","cleaned_data_200000_300000.csv","cleaned_data_300000_400000.csv"]:
+        print("LOOKING AT FILE",file)
+        cleaned_data = pd.read_csv(file)
+        cleaned_data.set_index("Unnamed: 0",inplace=True)
+
+        best_K = 4
+
+        #once you have the final groups, call Jose's graphing functions on each cluster to compare
+        assignments, centroids = run_Kmeans_clustering(cleaned_data, best_K)
+        assignment_frame = pd.DataFrame.from_dict(assignments, orient="index")
+        total_frame = pd.concat([cleaned_data, assignment_frame], axis=1)
+
+        for cluster in centroids.keys():
+            print("looking at the centroids")
+            users = total_frame.loc[total_frame[0] == cluster].index.values.tolist()
+            # get the data for the users that were put in this cluster
+            dataframe_cluster = cleaned_data.loc[users]
+            getStats("",dataframe_cluster,"KMeans Cluster_"+str(cluster)+" ")
+
     cleaned_data = pd.read_csv("cleaned_data_10000.csv")
-    cleaned_data.set_index("Unnamed: 0",inplace=True)
-
-    best_K = find_best_K(cleaned_data)
-    #print(cleaned_data)
-
-    ##TEMP
-    get_stability(cleaned_data,4,0.3,100)
-    ##TEMP
-
-    #find the best k value for k-means
-
-
-    #find the best parameters for DBSCAN
-
-    #run k-means and DBASCAN on all data
-
-
-    #record the overall stability of each algorithm
-    assignments = run_DBScan_clustering(cleaned_data)
+    cleaned_data.set_index("Unnamed: 0", inplace=True)
+    print("running DBSCAN")
+    assignments = run_DBScan_clustering(cleaned_data, eps=0.05, min_samples=125)
+    print("Got the assignments for DBSCAN")
     assignment_frame = pd.DataFrame.from_dict(assignments, orient="index")
     total_frame = pd.concat([cleaned_data, assignment_frame], axis=1)
+    print(total_frame)
     clusters = assignment_frame[0].unique()
     for cluster in clusters:
         cluster_frame = total_frame.loc[total_frame[0] == cluster]
-        getStats("", cluster_frame, "Cluster_" + str(cluster))
-
-
-    #once you have the final groups, call Jose's graphing functions on each cluster to compare
-    assignments, centroids = run_Kmeans_clustering(cleaned_data, best_K)
-    assignment_frame = pd.DataFrame.from_dict(assignments, orient="index")
-    total_frame = pd.concat([cleaned_data, assignment_frame], axis=1)
-
-    for cluster in centroids.keys():
-        print("looking at the centroids")
-        users = total_frame.loc[total_frame[0] == cluster].index.values.tolist()
-        # get the data for the users that were put in this cluster
-        dataframe_cluster = cleaned_data.loc[users]
-        getStats("",dataframe_cluster,"Cluster_"+str(cluster))
-
+        getStats("", cluster_frame, "DBSCAN Cluster_" + str(cluster) + " ")
 
 
 

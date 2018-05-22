@@ -156,10 +156,6 @@ def preprocess(num_groups = "all"):
                 e = sys.exc_info()
                 print(e)
                 print(review_users)
-                #total_frame.to_csv("cleaned_data_upto_" + str(i) + ".csv")
-
-                # print(total_prep_so_far)
-        #total_frame.to_csv("cleaned_data_"+str(num_groups)+".csv")
 
 
 
