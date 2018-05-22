@@ -114,6 +114,27 @@ def run_Kmeans_clustering(dataframe,K):
 
     return user_cluster_dict, centroid_data
 
+def run_DBScan_clustering(dataframe, eps=0.03, min_samples=3):
+    """
+    This Function will run the DBSCAN algorithm to find the best clusters given the set parameters.
+
+    :param dataframe: the data to fit to
+    :return:
+    """
+    dataframe2 = dataframe.copy(deep=True)
+
+    # this will exclude a column from the dataframe
+    # cleaned_data.loc[:, cleaned_data.columns != 'Unnamed: 0']
+
+    clusterer = DBSCAN(eps=eps, min_samples=min_samples).fit(dataframe.loc[:, dataframe.columns != 'Unnamed: 0'])
+    labels = clusterer.labels_
+
+    user_list = dataframe.index.values.tolist()
+
+    end_dict = {}
+    for i in range(len(labels)):
+        end_dict[user_list[i]] = labels[i]
+    return end_dict
 
 
 def get_best_paramters_DBSCAN(dataframe):
@@ -122,6 +143,7 @@ def get_best_paramters_DBSCAN(dataframe):
     :param dataframe:
     :return:
     '''
+
 
 
 def get_adjacency_matrix(assignment_dict, users = []):
@@ -174,18 +196,40 @@ def get_stability(dataframe, K, eps, min_samples):
             old_matrix = new_matrix.copy(deep = True)
     print("The average percent difference for K-means with K=",K,"is",np.mean(diff_list))
 
+    diff_list = []
+    for i in range(5):
+        if i == 0:
+            old_assignments= run_DBScan_clustering(dataframe, eps=eps,min_samples=min_samples)
+            old_matrix = get_adjacency_matrix(old_assignments)
+            user_list = old_matrix.index.values.tolist()
+        else:
+            new_assignments, centroids = run_DBScan_clustering(dataframe, eps=eps,min_samples=min_samples)
+            new_matrix = get_adjacency_matrix(new_assignments,user_list)
+
+            diff = np.subtract(new_matrix,old_matrix)
+            diff_frame = pd.DataFrame(diff)
+            #print("the diff frame")
+            #print(diff_frame)
+            diff_frame.replace(-1,0,True)
+            total_diff = np.sum(np.sum(diff_frame))
+            print("Got the total diff of",total_diff)
+            diff_list.append(total_diff)
+            old_matrix = new_matrix.copy(deep = True)
+    print("The average percent difference for DBSCAN with epsilon=",eps,"and min_samples",min_samples,"is ",np.mean(diff_list))
 
 if __name__ == "__main__":
     cleaned_data = pd.read_csv("cleaned_data_10000.csv")
     cleaned_data.set_index("Unnamed: 0",inplace=True)
+
+    best_K = find_best_K(cleaned_data)
     #print(cleaned_data)
 
     ##TEMP
-    get_stability(cleaned_data,4,0,0)
+    get_stability(cleaned_data,4,0.3,100)
     ##TEMP
 
     #find the best k value for k-means
-    best_K = find_best_K(cleaned_data)
+
 
     #find the best parameters for DBSCAN
 
@@ -193,7 +237,13 @@ if __name__ == "__main__":
 
 
     #record the overall stability of each algorithm
-
+    assignments = run_DBScan_clustering(cleaned_data)
+    assignment_frame = pd.DataFrame.from_dict(assignments, orient="index")
+    total_frame = pd.concat([cleaned_data, assignment_frame], axis=1)
+    clusters = assignment_frame[0].unique()
+    for cluster in clusters:
+        cluster_frame = total_frame.loc[total_frame[0] == cluster]
+        getStats("", cluster_frame, "Cluster_" + str(cluster))
 
 
     #once you have the final groups, call Jose's graphing functions on each cluster to compare

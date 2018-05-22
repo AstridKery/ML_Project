@@ -47,7 +47,7 @@ def getStats(filename, data_file, title = "data"):
 
     print(results)
 
-
+#def getDBSCANStatitstics():
 
 
 if __name__ == '__main__':
