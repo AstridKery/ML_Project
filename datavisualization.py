@@ -31,7 +31,7 @@ def getClusterStatistics(x_input):
     return mean, variance
 
 
-def getStats(filename, data_file, title = "data"):
+def getStats(filename, data_file, title = ""):
 
     if len(filename) > 0:
         data_file = pd.read_csv(filename)
@@ -43,22 +43,22 @@ def getStats(filename, data_file, title = "data"):
     col_name = 'num_states'
     results[col_name] = getClusterStatistics(data_file[col_name])
     bins = np.sort(list(data_file[col_name].unique()))
-    generateHist(data_file[col_name], bins, "Number of States, " + dataset, "Number of States Normalized", "Number of Users")
+    generateHist(data_file[col_name], bins, title + "Number of States, " + dataset, "Number of States Normalized", "Number of Users")
     
     col_name = 'state_variance'
     results[col_name] = getClusterStatistics(data_file[col_name])
     bins = np.sort(list(data_file[col_name].unique()))
-    generateHist(data_file[col_name], bins, "State Variance, " + dataset, "Variance Normalized", "Number of Users")
+    generateHist(data_file[col_name], bins, title + "State Variance, " + dataset, "Variance Normalized", "Number of Users")
     
     col_name = '1_day_max_reviews'
     results[col_name] = getClusterStatistics(data_file[col_name])
     bins = np.sort(list(data_file[col_name].unique()))
-    generateHist(data_file[col_name], bins, "Max Reviews in a Day, " + dataset, "Number of Reviews Normalized", "Number of Users")
+    generateHist(data_file[col_name], bins, title + "Max Reviews in a Day, " + dataset, "Number of Reviews Normalized", "Number of Users")
     
     col_name = 'star_variance'
     results[col_name] = getClusterStatistics(data_file[col_name])
     bins = np.sort(list(data_file[col_name].unique()))
-    generateHist(data_file[col_name], bins, "Star Variance, " + dataset, "Number of Stars Normalized", "Number of Users")
+    generateHist(data_file[col_name], bins, title + "Star Variance, " + dataset, "Number of Stars Normalized", "Number of Users")
 
     print(results)
 
