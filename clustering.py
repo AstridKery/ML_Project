@@ -114,7 +114,30 @@ def run_Kmeans_clustering(dataframe,K):
 
     return user_cluster_dict, centroid_data
 
+def run_DBScan_clustering(dataframe, eps=0.03, min_samples=3):
+    """
+    This Function will run the DBSCAN algorithm to find the best clusters given the set parameters.
 
+    :param dataframe: the data to fit to
+    :return:
+    """
+    dataframe2 = dataframe.copy(deep=True)
+
+    # this will exclude a column from the dataframe
+    # cleaned_data.loc[:, cleaned_data.columns != 'Unnamed: 0']
+
+    clusterer = DBSCAN(eps=eps, min_samples=min_samples).fit(dataframe.loc[:, dataframe.columns != 'Unnamed: 0'])
+    labels = clusterer.labels_
+    number_of_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    user_cluster_dict = dict()
+
+    for point in range(len(labels)):
+        if labels[point] not in user_cluster_dict.keys():
+            user_cluster_dict[labels[point]] = [] #pd.DataFrame()
+
+        user_cluster_dict[labels[point]].append(dataframe.iloc[point])
+
+    return user_cluster_dict
 
 def get_best_paramters_DBSCAN(dataframe):
     '''
@@ -122,6 +145,8 @@ def get_best_paramters_DBSCAN(dataframe):
     :param dataframe:
     :return:
     '''
+
+
 
 
 def get_stability_DBSCAN(dataframe,eps,min_samples):
@@ -148,7 +173,6 @@ def get_stability_K_Means(dataframe, K):
     # run K-means twice and get hammming distance
 
     # return average of the distances
-
 
 if __name__ == "__main__":
     cleaned_data = pd.read_csv("cleaned_data_10000.csv")
